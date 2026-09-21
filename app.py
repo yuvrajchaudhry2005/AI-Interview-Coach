@@ -1,5 +1,6 @@
 import streamlit as st
 from foundry_client import create_conversation, ask_agent
+from speech_service import speech_to_text
 
 st.set_page_config(
     page_title="AI Interview Coach",
@@ -25,6 +26,12 @@ if "interview_started" not in st.session_state:
 with st.sidebar:
     st.header("Interview Setup")
 
+    resume = st.file_uploader(
+        "Upload your resume",
+        type=["pdf"],
+        help="Upload your resume in PDF format"
+    )
+
     role = st.text_input(
         "Target Job Role",
         placeholder="e.g. Backend Developer"
@@ -39,6 +46,10 @@ with st.sidebar:
 
         if not role:
             st.warning("Please enter your target job role.")
+
+        elif not resume:
+            st.warning("Please upload your resume.")
+
         else:
             st.session_state.conversation_id = create_conversation()
             st.session_state.messages = []
@@ -48,8 +59,11 @@ with st.sidebar:
 I am preparing for a {role} interview.
 My experience level is {experience}.
 
-Start my interview.
+I have uploaded my resume.
+
+Start my interview using my resume when relevant.
 Ask me one interview question at a time.
+Start with my projects and technical skills.
 Wait for my answer before asking the next question.
 Evaluate my answers and give a score out of 10 with feedback.
 """
@@ -77,9 +91,28 @@ if st.session_state.interview_started:
         with st.chat_message(message["role"]):
             st.write(message["content"])
 
-    # Candidate answer
+    # Text answer
     answer = st.chat_input("Type your answer here...")
 
+    # Voice answer
+    voice_answer = st.audio_input("🎤 Answer using your voice")
+
+    # Convert voice to text
+    if voice_answer:
+
+        with open("voice_input.wav", "wb") as f:
+            f.write(voice_answer.getvalue())
+
+        with st.spinner("🎤 Converting your voice to text..."):
+            answer = speech_to_text("voice_input.wav")
+
+        if answer:
+            st.info(f"🎤 You said: {answer}")
+        else:
+            st.warning("Sorry, I could not understand the audio.")
+
+
+    # Send answer to AI
     if answer:
 
         st.session_state.messages.append(
@@ -108,5 +141,4 @@ if st.session_state.interview_started:
                 "role": "assistant",
                 "content": response
             }
-
         )
