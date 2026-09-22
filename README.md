@@ -1,53 +1,215 @@
-# AI Interview Coach
+# Interview IQ - AI Interview Coach
 
-Practice realistic technical, HR, behavioral, or mixed interviews with an adaptive AI interviewer.
+Interview IQ is a college AI prototype for realistic, resume-grounded technical, HR, behavioral, and mixed mock interviews. It uses Microsoft Azure AI Foundry for question generation, document grounding, evaluation, and study-plan generation, with Azure AI Speech for optional voice answers.
 
-## Flow
+## 1. Project Overview
 
-Resume upload → Interview setup → Live interview → Final report → Study plan
+Preparing for interviews is more useful when practice is personalized to the candidate's own projects and skills. Interview IQ turns a resume into an interactive interview session instead of relying on a static question bank.
 
-- Questions are grounded in your PDF resume through Azure AI File Search.
-- The interviewer asks one question at a time and does not score live.
-- Voice answers use Azure Speech-to-Text (with a local fallback if speech credentials are missing).
-- After the loop you get scores, gaps, communication notes, and a 7-day checklist.
+The application provides:
 
-## Run locally
+1. Account creation and login.
+2. Resume upload and interview configuration.
+3. AI-generated questions grounded in the uploaded PDF resume.
+4. Typed or voice-based answers with editable transcription.
+5. Optional camera capture controlled by the candidate.
+6. A final score, strengths, weaknesses, technical gaps, and communication analysis.
+7. A personalized seven-day preparation plan.
+8. A history dashboard showing interview count and scores.
 
-```bash
-pip install -r requirements.txt
+## 2. Key Features
+
+- **Resume grounding:** Upload a PDF resume, which is indexed through Microsoft Foundry File Search.
+- **Adaptive conversation:** Follow-up questions use the current Foundry conversation and previous answers.
+- **Configurable interview:** Select the role, experience level, interview type, and number of questions.
+- **Voice answers:** Record an answer in the browser and transcribe it with Azure AI Speech.
+- **Editable transcript:** Review and correct the generated transcript before submitting it.
+- **Optional camera:** Enable camera capture only when desired. Camera frames are not sent to Foundry or saved in history.
+- **Post-interview analytics:** Receive an overall score, question-wise scores, strengths, weaknesses, technical gaps, and improvement suggestions.
+- **Study plan:** Generate a role-specific seven-day preparation plan from the interview results.
+- **Account history:** View previous interview attempts, average score, best score, and total questions.
+- **Local privacy controls:** Delete the local account and associated interview history from the sidebar.
+
+## 3. Application Workflow
+
+```text
+Candidate browser
+       |
+       v
+Streamlit interface (app.py)
+       |
+       +--> Login and sign-up
+       |        |
+       |        +--> SQLite users and interview history
+       |
+       +--> PDF resume upload
+       |        |
+       |        +--> Azure AI Foundry File Search / Vector Store
+       |
+       +--> Interview conversation
+       |        |
+       |        +--> Microsoft Foundry Responses API
+       |        +--> gpt-4.1-mini
+       |        +--> File Search grounding
+       |
+       +--> Optional voice answer
+       |        |
+       |        +--> Azure AI Speech-to-Text
+       |        +--> SpeechRecognition fallback
+       |
+       +--> Final report and study plan
+                |
+                +--> Score saved to local interview history
+```
+
+## 4. Technology Stack
+
+- **Frontend and application runtime:** Streamlit
+- **Language:** Python
+- **AI platform:** Microsoft Azure AI Foundry
+- **Model:** `gpt-4.1-mini`
+- **Foundry SDK:** `azure-ai-projects`
+- **Authentication:** Azure Identity with `DefaultAzureCredential` and interactive browser fallback
+- **Document grounding:** Microsoft Foundry Files, Vector Stores, and File Search
+- **Speech-to-text:** Azure Cognitive Services Speech SDK
+- **Speech fallback:** `SpeechRecognition` with Google recognition during local demos
+- **Local persistence:** SQLite
+- **Password security:** PBKDF2-SHA256 with a random salt
+- **Configuration:** `python-dotenv`
+
+## 5. Azure Services Required
+
+1. **Microsoft Foundry project**
+   - A Microsoft Foundry project endpoint.
+   - Access to the `gpt-4.1-mini` model.
+   - Permissions to create conversations, files, and vector stores.
+
+2. **Azure AI Speech resource** (optional)
+   - A Speech resource in a supported Azure region.
+   - Required only for Azure Speech transcription. The application has a local fallback for demos.
+
+3. **Azure identity access**
+   - An Azure CLI login or another credential supported by `DefaultAzureCredential`.
+
+## 6. Environment Variables
+
+Create a `.env` file in the project root:
+
+```env
+# Microsoft Foundry project endpoint
+AZURE_AI_PROJECT_ENDPOINT=https://<resource>.services.ai.azure.com/api/projects/<project-name>
+AZURE_TENANT_ID=<your-tenant-id>
+
+# Optional Azure AI Speech configuration
+SPEECH_KEY=<your-speech-key>
+SPEECH_REGION=<your-speech-region>
+
+# Optional local database location
+AUTH_DATABASE_PATH=interview_coach.db
+```
+
+Never commit `.env`, access keys, passwords, or tokens. The Foundry client uses Azure Identity instead of a hardcoded Foundry API key.
+
+## 7. Installation
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+## 8. Azure CLI Authentication
+
+```powershell
+az login
+az account show
+```
+
+If multiple subscriptions are available:
+
+```powershell
+az account set --subscription "<subscription-name-or-id>"
+```
+
+The application first tries `DefaultAzureCredential`. If that cannot authenticate, it opens an interactive browser login using `InteractiveBrowserCredential`.
+
+## 9. Running the Application
+
+```powershell
 streamlit run app.py
 ```
 
-Configure Azure in `.env` (`AZURE_AI_PROJECT_ENDPOINT`, `AZURE_TENANT_ID`, optional `SPEECH_KEY` / `SPEECH_REGION`). Sign in with Azure CLI or the interactive browser credential on first run.
+Open the local application at:
 
-## Accounts
+```text
+http://localhost:8501
+```
 
-The app includes login and sign-up. User records and completed interview history are stored in the local SQLite database `interview_coach.db`, with passwords protected by PBKDF2 hashing. After login, the setup screen shows interview count, average score, best score, total questions, and recent attempts. Set `AUTH_DATABASE_PATH` in `.env` to use a different database location.
+## 10. Data Storage and Privacy
 
-## Privacy and Responsible AI
+### Local SQLite database
 
-- Resumes are uploaded to Microsoft Foundry File Search so questions can reference the candidate's own projects and experience.
-- Interview answers are sent through the Foundry conversation to generate follow-up questions, evaluation reports, and study plans.
-- Camera access is optional. Captured frames are not sent to Foundry or stored in interview history.
-- Local account data and scores are stored in `interview_coach.db`. Users can delete their local account and history from the sidebar.
-- AI scores are practice guidance, can contain errors or bias, and must not be used as the sole hiring decision.
-- Human review is expected before using interview results for a consequential decision.
-- Production deployments should use HTTPS, managed identity or a secret manager, access controls, backups, and a documented Azure data-retention policy.
+The file `interview_coach.db` stores:
 
-## Originality and Acknowledgements
+- User name, email, password hash, and account creation date.
+- Completed interview role, interview type, score, question count, and completion date.
 
-The application logic and user experience are this project's work. It uses the following third-party technologies and services:
+Passwords are never stored as plain text. The database is local by default and is ignored by Git.
 
-- Streamlit for the web interface.
-- Microsoft Azure AI Foundry and `azure-ai-projects` for conversations, model responses, and File Search.
+### Microsoft Foundry
+
+- The uploaded PDF resume is sent to Microsoft Foundry Files and attached to a Vector Store for File Search.
+- Interview messages and answers are sent through the Foundry conversation.
+- Foundry generates questions, evaluation reports, and study plans.
+
+### Camera
+
+Camera use is optional. Captured frames are not sent to Foundry, saved to SQLite, or included in interview history.
+
+## 11. Testing and Verification
+
+Run the local authentication and history tests:
+
+```powershell
+python -m unittest -v test_auth.py
+```
+
+Compile the Python modules:
+
+```powershell
+python -m py_compile app.py auth_store.py test_auth.py
+```
+
+`test_foundry.py` is an interactive Azure Foundry smoke-test script. It requires Azure access and may open a browser for authentication.
+
+## 12. Responsible AI
+
+- **Educational purpose:** Interview IQ is a preparation tool, not a hiring decision system.
+- **Transparency:** The application tells users that reports are AI-generated and may contain errors or bias.
+- **Human oversight:** A human should review results before they are used in any consequential decision.
+- **Privacy:** Users control whether to enable the camera and can delete their local account and interview history.
+- **Fairness limitation:** The prototype does not yet include formal demographic fairness testing or independent model benchmarking.
+- **No psychological assessment:** The system is intended to evaluate interview answers, technical relevance, depth, and communication structure, not personality, mental state, honesty, or employability.
+
+## 13. Originality and Acknowledgements
+
+The application workflow and user experience are this project's work. The project uses and acknowledges:
+
+- Streamlit for the application interface.
+- Microsoft Azure AI Foundry and `azure-ai-projects` for model responses and File Search.
 - Azure Identity for Microsoft Entra authentication.
 - Azure Cognitive Services Speech SDK for speech-to-text.
-- `SpeechRecognition` as a local/demo speech fallback.
-- Python standard-library SQLite and PBKDF2-SHA256 password hashing for local account storage.
-- AI-assisted development tools were used during implementation and reviewed by the project team.
+- `SpeechRecognition` for the local speech fallback.
+- Python SQLite and PBKDF2-SHA256 for local account storage.
+- AI-assisted development tools used during implementation and reviewed by the project team.
 
-The team should add the exact source links, licenses, datasets, prompts, and AI-assisted tools used in the final submission package.
+Add exact source links, licenses, datasets, prompts, and team member contributions to the final submission package where required by the institution.
 
-## Known Responsible-AI Limitations
+## 14. Current Limitations and Future Improvements
 
-The prototype does not yet perform formal demographic fairness testing, independent model benchmarking, or remote Azure-data deletion. Those checks and retention controls are required before production use. The current design supports transparency, user control, local account deletion, and human oversight for a student prototype.
+- Current document upload supports PDF resumes; DOCX and TXT ingestion are not yet implemented.
+- Formal fairness testing and model benchmarking are not yet included.
+- Azure-side deletion of uploaded resumes and Foundry vector stores is not yet automated.
+- Production deployment should add HTTPS, managed identity, secret management, access controls, backups, and a documented data-retention policy.
+- Future versions could add custom scoring rubrics, exportable PDF reports, and optional Azure Vision-based presentation coaching with explicit consent.
