@@ -1,0 +1,7 @@
+streamlit>=1.39.0
+python-dotenv>=1.0.1
+azure-identity>=1.19.0
+azure-ai-projects>=1.0.0
+azure-cognitiveservices-speech>=1.41.0
+SpeechRecognition>=3.10.4
+openai>=1.55.0
